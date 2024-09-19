@@ -9,26 +9,25 @@ def load_data():
 
 hitters_perc = load_data()
 
-# Streamlit app
 st.title("Player Percentiles")
 
-# Select player filter: All players or Qualified players
+# Select player
 player_filter = st.radio("Choose player type:", ["All Players", "Qualified Players"])
 
-# Filter dataset based on the 'isQualified' column
+# Filter dataset
 if player_filter == "Qualified Players":
     filtered_data = hitters_perc[hitters_perc['isQualified'] == True]
 else:
     filtered_data = hitters_perc
 
-# Recalculate percentiles based on the filtered data
+# Calculate percentiles
 metrics = ['OPS', 'AVG', 'OBP', 'SLG', 'K%', 'BB%', 'Whiff%', 'SwStr%', 'FB%', 'GB%', 'LD%', 'SB%', 'BABIP']
 for metric in metrics:
     percentile_column = metric + '_percentile'
-    # Recalculate percentiles for each metric
+    # Recalculate percentiles permetric
     filtered_data[percentile_column] = filtered_data[metric].rank(pct=True) * 100
 
-# Select player from filtered data, defaulting to "Art Charles" when "All Players" is selected
+# Select player, set default
 if player_filter == "All Players":
     default_player = "Art Charles" if "Art Charles" in filtered_data['Name'].values else filtered_data['Name'].iloc[0]
 else:
@@ -36,19 +35,17 @@ else:
 
 player_name = st.selectbox("Select a player:", filtered_data['Name'].unique(), index=filtered_data['Name'].tolist().index(default_player))
 
-# Get selected player's data
+# Get player's data
 player_data = filtered_data[filtered_data['Name'] == player_name].iloc[0]
 
-# Function to create the percentiles chart
+# Function for percentiles
 def percentiles_chart(player_data):
     fig = go.Figure()
 
-    # Correctly ordered metrics list
-    reverse_metrics = ['K%', 'Whiff%', 'SwStr%', 'GB%']  # Reverse percentiles for these metrics
+    reverse_metrics = ['K%', 'Whiff%', 'SwStr%', 'GB%']
 
-    plotted_metrics = []  # List to keep track of metrics that are plotted
+    plotted_metrics = []  
 
-    # Custom color scale: blue -> gray -> red
     custom_colorscale = [
         [0.0, 'blue'],
         [0.2, 'DodgerBlue'],
@@ -60,14 +57,14 @@ def percentiles_chart(player_data):
         [1.0, 'darkred']
     ]
 
-    # Metrics to be formatted with 3 decimal places
+    # Metrics for special format
     three_decimal_metrics = ['OBP', 'SLG', 'AVG', 'OPS', 'BABIP']
 
     for metric in metrics:
-        value = player_data.get(metric, None)  # Metric value
-        percentile_value = player_data.get(metric + '_percentile', None)  # Percentile value
+        value = player_data.get(metric, None)
+        percentile_value = player_data.get(metric + '_percentile', None)
 
-        # Skip metrics with NaN values
+        # Skip nan
         if pd.isna(value) or pd.isna(percentile_value):
             continue
 
