@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
-from PIL import Image
-import io
 
 # Load your dataset
 @st.cache_data
@@ -24,8 +21,20 @@ if player_filter == "Qualified Players":
 else:
     filtered_data = hitters_perc
 
-# Select player from filtered data
-player_name = st.selectbox("Select a player:", filtered_data['Name'].unique())
+# Recalculate percentiles based on the filtered data
+metrics = ['OPS', 'AVG', 'OBP', 'SLG', 'K%', 'BB%', 'Whiff%', 'SwStr%', 'FB%', 'GB%', 'LD%', 'SB%', 'BABIP']
+for metric in metrics:
+    percentile_column = metric + '_percentile'
+    # Recalculate percentiles for each metric
+    filtered_data[percentile_column] = filtered_data[metric].rank(pct=True) * 100
+
+# Select player from filtered data, defaulting to "Art Charles" when "All Players" is selected
+if player_filter == "All Players":
+    default_player = "Art Charles" if "Art Charles" in filtered_data['Name'].values else filtered_data['Name'].iloc[0]
+else:
+    default_player = filtered_data['Name'].iloc[0]
+
+player_name = st.selectbox("Select a player:", filtered_data['Name'].unique(), index=filtered_data['Name'].tolist().index(default_player))
 
 # Get selected player's data
 player_data = filtered_data[filtered_data['Name'] == player_name].iloc[0]
@@ -35,7 +44,6 @@ def percentiles_chart(player_data):
     fig = go.Figure()
 
     # Correctly ordered metrics list
-    metrics = ['OPS', 'AVG', 'OBP', 'SLG', 'K%', 'BB%', 'Whiff%', 'SwStr%', 'FB%', 'GB%', 'LD%', 'SB%', 'BABIP']
     reverse_metrics = ['K%', 'Whiff%', 'SwStr%', 'GB%']  # Reverse percentiles for these metrics
 
     plotted_metrics = []  # List to keep track of metrics that are plotted
@@ -103,21 +111,21 @@ def percentiles_chart(player_data):
             showarrow=False,
             font=dict(size=12, color='white'),  # Keep this text white
             align='center',
-            width=30,
-            height=30,
+            width=18,
+            height=18,
             bgcolor='gray',  # Gray square
             bordercolor='black',
             borderpad=4
         )
 
-        # Add actual value text outside the plot (in the white area)
+        # Add actual value text outside the plot (aligned to the right side, further away from the grid)
         fig.add_annotation(
-            x=110,  # Positioning outside the plot
+            x=105,  # Keep the value aligned on the right side
             y=metric,
             text=f"<b>{formatted_value}</b>",  # Make the text bold, formatted correctly
             showarrow=False,
             xref='x',
-            xanchor='left',
+            xanchor='left',  # Keep it outside the grid
             yref='y',
             yanchor='middle',
             font=dict(size=14, color='black')
@@ -133,12 +141,37 @@ def percentiles_chart(player_data):
         line=dict(color="gray", width=2, dash="dash"),
     )
 
+    # Add disclaimer
+    fig.add_annotation(
+        text="*2.1 PA per team game to qualify",
+        x=0, xref="paper",  # Anchored to the left side of the chart
+        xanchor='left',
+        y=-0.05, yref='paper',
+        yanchor='bottom',
+        showarrow=False,
+        font=dict(size=10, color="red")
+    )
+
+    # Add watermark below the disclaimer
+    fig.add_annotation(
+        text='@iamfrankjuarez', 
+        x=0, xref='paper',  # Anchored to the left side below the disclaimer
+        xanchor='left', 
+        y=-0.10, yref='paper',  # Position it lower than the disclaimer
+        yanchor='bottom', 
+        showarrow=False,
+        font=dict(size=12, color='gray'),
+        opacity=0.4
+    )
+
     # Update layout for better visualization and mobile responsiveness
     fig.update_layout(
+        autosize=True,  # Enable autosize for responsiveness
         title=dict(text=f"Percentiles for {player_data['Name']}", font=dict(color="black")),  # Title in black
         xaxis=dict(
-            range=[0, 110],
+            range=[0, 105],  # Reduced range to bring values closer to the bars
             showgrid=False,  # Disable vertical gridlines
+            tickfont=dict(color='black')
         ),
         yaxis=dict(
             autorange='reversed',
@@ -150,16 +183,37 @@ def percentiles_chart(player_data):
             gridwidth=1,  # Set gridline width
             gridcolor='lightgray',  # Set gridline color
         ),
-        height=600,  # Adjust height for mobile display
-        width=None,  # Remove fixed width to allow flexibility
+        height=800,  # Fixed height
+        width=800,  # Fixed width
         showlegend=False,
-        margin=dict(l=50, r=150, t=50, b=20),  # Adjust margins for mobile
+        margin=dict(l=20, r=50, t=50, b=80),  # Adjusted bottom margin for watermark and disclaimer
         plot_bgcolor='beige',  # Set plot background color to beige
         paper_bgcolor='beige',  # Set overall background color to beige
     )
 
     # Display the plotly chart in Streamlit with mobile responsiveness
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)  # Use container width to make it responsive
 
 # Plot the percentiles chart for the selected player
 percentiles_chart(player_data)
+
+# Socials and contact functions
+def open_socials():
+    st.write("Follow me on social media:")
+    st.markdown("[Twitter](https://twitter.com/iamfrankjuarez)")
+    st.markdown("[LinkedIn](https://linkedin.com/in/francisco-juarez-niebla-4b6271147)")
+    st.markdown("[GitHub](https://github.com/franciscojuarezn)")
+
+def show_contact_form():
+    st.write("📧 Contact me at: data.frankly@gmail.com")
+
+# Socials and Contact section at the bottom of the page
+col1, col2, col3 = st.columns([4,1,1], gap="small")
+
+with col2:
+    if st.button("🔗 Socials"):
+        open_socials()
+
+with col3:
+    if st.button("📧 Contact"):
+        show_contact_form()
